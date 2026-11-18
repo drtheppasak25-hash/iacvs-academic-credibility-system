@@ -358,7 +358,7 @@
       <input
         type="password"
         id="gemini-api-key-input"
-        placeholder="วาง Gemini API Key (AIzaSy...)"
+        placeholder="วาง Gemini API Key (AQ. หรือ AIzaSy...)"
         class="px-3 py-2 bg-slate-950/80 border border-slate-700 rounded-xl text-xs text-slate-200 w-56 focus:border-indigo-500 outline-none"
       />
       <button
@@ -1414,51 +1414,40 @@ CREATE POLICY "Allow public read institutional cockpit" ON public.iacvs_audit_lo
                     supabaseClient = null;
                 }
             }
-            // =========================================================================
-// GEMINI AI INDIVIDUAL ACADEMIC SYNTHESIZER (VERSION 6.1 ADD-ON)
+    // =========================================================================
+// GEMINI AI INDIVIDUAL ACADEMIC SYNTHESIZER (รองรับ API Key แบบ AQ. และ AIzaSy)
 // =========================================================================
 const GEMINI_KEY_STORAGE = "iacvs_gemini_api_key";
 
-// โหลด API Key เดิมที่เคยบันทึกไว้ (ถ้ามี)
-window.addEventListener("DOMContentLoaded", () => {
-  const savedKey = localStorage.getItem(GEMINI_KEY_STORAGE) || (typeof apiKey !== "undefined" ? apiKey : "");
+document.addEventListener("DOMContentLoaded", () => {
+  const savedKey = localStorage.getItem(GEMINI_KEY_STORAGE) || "";
   const inputEl = document.getElementById("gemini-api-key-input");
-  if (inputEl && savedKey) {
-    inputEl.value = savedKey;
-  }
+  if (inputEl && savedKey) inputEl.value = savedKey;
 });
 
-async function runGeminiIndividualAnalysis() {
+window.runGeminiIndividualAnalysis = async function () {
   const inputEl = document.getElementById("gemini-api-key-input");
   const outputEl = document.getElementById("gemini-analysis-output");
   const btnEl = document.getElementById("btn-run-gemini-ai");
 
   const userKey = inputEl ? inputEl.value.trim() : "";
-  if (!userKey) {
-    outputEl.innerHTML = `<div class="p-3 rounded-xl bg-rose-950/40 border border-rose-500/30 text-rose-300 text-xs">⚠️ กรุณากรอก Gemini API Key (ขึ้นต้นด้วย AIzaSy...) ในช่องด้านบนก่อนกดวิเคราะห์ครับ (สามารถขอรับฟรีได้ที่ aistudio.google.com)</div>`;
+  if (!userKey || (!userKey.startsWith("AQ.") && !userKey.startsWith("AIza"))) {
+    outputEl.innerHTML = `<div class="p-3 rounded-xl bg-rose-950/40 border border-rose-500/30 text-rose-300 text-xs">⚠️ กรุณากรอก Gemini API Key ที่ถูกต้อง (ขึ้นต้นด้วย AQ. หรือ AIzaSy...) ก่อนกดวิเคราะห์ครับ</div>`;
     return;
   }
 
-  // บันทึกคีย์ไว้ในเครื่องผู้ใช้เพื่อความสะดวกครั้งถัดไป
   localStorage.setItem(GEMINI_KEY_STORAGE, userKey);
-
-  // ดึงค่าสรุปปัจจุบันจากหน้าจอ (แท็บ 1-8)
   const bodyTextSnapshot = document.body.innerText.slice(0, 6000);
 
   btnEl.disabled = true;
   btnEl.innerHTML = `<span>⏳ กำลังสังเคราะห์ข้อมูล...</span>`;
-  outputEl.innerHTML = `
-    <div class="p-4 rounded-xl bg-slate-950/60 border border-indigo-500/20 text-indigo-300 text-xs animate-pulse">
-      🤖 Gemini AI กำลังอ่านผลลัพธ์จากทุกมิติ (บรรณานุกรม, ความทันสมัย, Similarity %, AI Pattern % และฐานข้อมูลวารสาร) เพื่อจัดทำบทวิเคราะห์รายบุคคล...
-    </div>
-  `;
+  outputEl.innerHTML = `<div class="p-4 rounded-xl bg-slate-950/60 border border-indigo-500/20 text-indigo-300 text-xs animate-pulse">🤖 Gemini AI กำลังวิเคราะห์ผลลัพธ์จากแท็บ 1–8 เพื่อจัดทำรายงานรายบุคคล...</div>`;
 
-  const promptText = `คุณคือผู้ทรงคุณวุฒิและกรรมการผู้เชี่ยวชาญด้านจริยธรรมการวิจัยและมาตรฐานวิทยานิพนธ์ระดับบัณฑิตศึกษา
-จงวิเคราะห์และแปลผลข้อมูลการตรวจสอบความน่าเชื่อถือของผลงานวิชาการชิ้นนี้ (ที่ปรากฏบนหน้าจอระบบ IACVS) ออกมาเป็นรายงานวิเคราะห์รายบุคคลที่ชัดเจน กระชับ และนำไปปฏิบัติได้จริง แบ่งเป็น 3 หัวข้อ:
-
-1. **บทสรุปการวินิจฉัยภาพรวม (Executive Diagnostic):** แปลความหมายตัวเลขและสถานะที่ตรวจพบทั้งหมดให้เข้าใจง่ายว่างานชิ้นนี้อยู่ในเกณฑ์ระดับใด (ดีมาก / ควรปรับปรุง / เสี่ยงสูง)
-2. **จุดแข็งและจุดเสี่ยงเฉพาะจุด (Strengths & Critical Risks):** ระบุชัดเจนว่าส่วนใดผ่านมาตรฐานแล้ว และส่วนใดเป็นจุดเสี่ยง (เช่น การอ้างอิงไม่ตรงกัน, วารสารล่าเหยื่อ, ความทันสมัยของเอกสาร, ความคล้ายคลึง Similarity %, หรือสำนวน AI %)
-3. **ข้อเสนอแนะเชิงปฏิบัติการเพื่อแก้ไข (Actionable Recommendations):** แนะนำแนวทางแก้ไขเป็นข้อๆ อย่างเป็นรูปธรรม (เช่น วิธี Paraphrase ลดค่า Similarity, การปรับปรุงบรรณานุกรม) เพื่อให้เจ้าของผลงานนำไปแก้ไขก่อนส่งสอบ
+  const promptText = `คุณคือผู้ทรงคุณวุฒิและกรรมการผู้เชี่ยวชาญด้านจริยธรรมการวิจัยและมาตรฐานวิทยานิพนธ์
+จงวิเคราะห์และแปลผลข้อมูลการตรวจสอบความน่าเชื่อถือของผลงานวิชาการชิ้นนี้ (ที่ปรากฏบนหน้าจอระบบ IACVS) ออกมาเป็นรายงานวิเคราะห์รายบุคคลภาษาไทยที่ชัดเจน กระชับ แบ่งเป็น 3 หัวข้อ:
+1. บทสรุปการวินิจฉัยภาพรวม (Executive Diagnostic)
+2. จุดแข็งและจุดเสี่ยงเฉพาะจุด (Strengths & Critical Risks)
+3. ข้อเสนอแนะเชิงปฏิบัติการเพื่อแก้ไข (Actionable Recommendations)
 
 ข้อมูลผลการตรวจสอบจากหน้าจอปัจจุบัน:
 ${bodyTextSnapshot}`;
@@ -1478,12 +1467,10 @@ ${bodyTextSnapshot}`;
 
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.error?.message || "ไม่สามารถเชื่อมต่อ Gemini API ได้");
+      throw new Error(data.error?.message || `HTTP ${response.status}: ไม่สามารถเชื่อมต่อ Gemini API ได้`);
     }
 
     const aiReply = data.candidates?.[0]?.content?.parts?.[0]?.text || "ไม่ได้รับข้อมูลตอบกลับจาก AI";
-
-    // แปลง Markdown เบื้องต้นให้แสดงผลสวยงาม
     const formattedHtml = aiReply
       .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
       .replace(/\n\n/g, '</p><p class="mt-2.5">')
@@ -1504,9 +1491,7 @@ ${bodyTextSnapshot}`;
     btnEl.disabled = false;
     btnEl.innerHTML = `<span>✨ ให้ AI วิเคราะห์และแปลผล</span>`;
   }
-}
-
-            
+};
             if (dot) dot.className = "w-2 h-2 rounded-full bg-amber-400";
             if (label) label.textContent = "Supabase Telemetry";
             return false;
@@ -1564,22 +1549,17 @@ ${bodyTextSnapshot}`;
             const recentItems = items.filter(i => i.year && (CURRENT_AUDIT_YEAR - Number(i.year)) <= 5);
             const recencyPct = total > 0 ? Math.round((recentItems.length / total) * 100) : 0;
 
-            return {
-                project_id: proj.id,
-                project_name: proj.name,
-                department: supabaseConfig.department || "ไม่ระบุหน่วยงาน",
-                role_submitted: workspaceState.currentRole || "researcher",
-                total_citations: total,
-                verified_ab_count: verifiedAB,
-                predatory_alerts: predatoryCount,
-                retraction_alerts: retractions,
-                recency_pct: recencyPct,
-                similarity_ext_pct: proj.similarityReport?.overallPct ?? 0,
-                ai_pattern_pct: proj.writingAudit?.aiPct ?? 0,
-                advisor_status: proj.advisorStatus || "รอการตรวจสอบ",
-                advisor_note: proj.advisorNote || "",
-                updated_at: new Date().toISOString()
-            };
+           return {
+            project_title: String(proj.name || "โครงการวิจัยไม่ระบุชื่อ"),
+            department: String(supabaseConfig.department || "บัณฑิตวิทยาลัย / ส่วนกลาง"),
+            auditor_role: String(workspaceState.currentRole || "researcher"),
+            total_citations: Number(total) || 0,
+            verified_ab: Number(verifiedAB) || 0,
+            predatory_alerts: Number(predatoryCount) || 0,
+            similarity_pct: Number(proj.similarityReport?.overallPct ?? 0) || 0,
+            ai_pattern_pct: Number(proj.writingAudit?.aiPct ?? 0) || 0,
+            approval_status: String(proj.advisorStatus || "รอการตรวจสอบ")
+        };
         }
 
         async function pushCurrentProjectTelemetry(silent = false) {
