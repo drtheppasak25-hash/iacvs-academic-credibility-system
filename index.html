@@ -355,18 +355,12 @@
     </div>
 
     <div class="flex flex-wrap items-center gap-2">
-      <input
-        type="password"
-        id="gemini-api-key-input"
-        placeholder="วาง Gemini API Key (AQ. หรือ AIzaSy...)"
-        class="px-3 py-2 bg-slate-950/80 border border-slate-700 rounded-xl text-xs text-slate-200 w-56 focus:border-indigo-500 outline-none"
-      />
-      <button
-        onclick="runGeminiIndividualAnalysis()"
+<button
+        onclick="runSmartAcademicSynthesizer()"
         id="btn-run-gemini-ai"
-        class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl shadow-md shadow-indigo-600/30 transition flex items-center gap-2 cursor-pointer"
+        class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl shadow-md shadow-indigo-600/30 transition flex items-center gap-2 cursor-pointer"
       >
-        <span>✨ ให้ AI วิเคราะห์และแปลผล</span>
+        <span>✨ วิเคราะห์และแปลผลรายบุคคลทันที (คลิกเดียว)</span>
       </button>
     </div>
   </div>
@@ -1415,87 +1409,6 @@ CREATE POLICY "Allow public read institutional cockpit" ON public.iacvs_audit_lo
                 }
             }
     // =========================================================================
-// GEMINI AI INDIVIDUAL ACADEMIC SYNTHESIZER (รองรับ API Key แบบ AQ. และ AIzaSy)
-// =========================================================================
-const GEMINI_KEY_STORAGE = "iacvs_gemini_api_key";
-
-document.addEventListener("DOMContentLoaded", () => {
-  const savedKey = localStorage.getItem(GEMINI_KEY_STORAGE) || "";
-  const inputEl = document.getElementById("gemini-api-key-input");
-  if (inputEl && savedKey) inputEl.value = savedKey;
-});
-
-window.runGeminiIndividualAnalysis = async function () {
-  const inputEl = document.getElementById("gemini-api-key-input");
-  const outputEl = document.getElementById("gemini-analysis-output");
-  const btnEl = document.getElementById("btn-run-gemini-ai");
-
-  const userKey = inputEl ? inputEl.value.trim() : "";
-  if (!userKey || (!userKey.startsWith("AQ.") && !userKey.startsWith("AIza"))) {
-    outputEl.innerHTML = `<div class="p-3 rounded-xl bg-rose-950/40 border border-rose-500/30 text-rose-300 text-xs">⚠️ กรุณากรอก Gemini API Key ที่ถูกต้อง (ขึ้นต้นด้วย AQ. หรือ AIzaSy...) ก่อนกดวิเคราะห์ครับ</div>`;
-    return;
-  }
-
-  localStorage.setItem(GEMINI_KEY_STORAGE, userKey);
-  const bodyTextSnapshot = document.body.innerText.slice(0, 6000);
-
-  btnEl.disabled = true;
-  btnEl.innerHTML = `<span>⏳ กำลังสังเคราะห์ข้อมูล...</span>`;
-  outputEl.innerHTML = `<div class="p-4 rounded-xl bg-slate-950/60 border border-indigo-500/20 text-indigo-300 text-xs animate-pulse">🤖 Gemini AI กำลังวิเคราะห์ผลลัพธ์จากแท็บ 1–8 เพื่อจัดทำรายงานรายบุคคล...</div>`;
-
-  const promptText = `คุณคือผู้ทรงคุณวุฒิและกรรมการผู้เชี่ยวชาญด้านจริยธรรมการวิจัยและมาตรฐานวิทยานิพนธ์
-จงวิเคราะห์และแปลผลข้อมูลการตรวจสอบความน่าเชื่อถือของผลงานวิชาการชิ้นนี้ (ที่ปรากฏบนหน้าจอระบบ IACVS) ออกมาเป็นรายงานวิเคราะห์รายบุคคลภาษาไทยที่ชัดเจน กระชับ แบ่งเป็น 3 หัวข้อ:
-1. บทสรุปการวินิจฉัยภาพรวม (Executive Diagnostic)
-2. จุดแข็งและจุดเสี่ยงเฉพาะจุด (Strengths & Critical Risks)
-3. ข้อเสนอแนะเชิงปฏิบัติการเพื่อแก้ไข (Actionable Recommendations)
-
-ข้อมูลผลการตรวจสอบจากหน้าจอปัจจุบัน:
-${bodyTextSnapshot}`;
-
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(userKey)}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: promptText }] }],
-          generationConfig: { temperature: 0.4 }
-        })
-      }
-    );
-
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error?.message || `HTTP ${response.status}: ไม่สามารถเชื่อมต่อ Gemini API ได้`);
-    }
-
-    const aiReply = data.candidates?.[0]?.content?.parts?.[0]?.text || "ไม่ได้รับข้อมูลตอบกลับจาก AI";
-    const formattedHtml = aiReply
-      .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
-      .replace(/\n\n/g, '</p><p class="mt-2.5">')
-      .replace(/\n/g, '<br>');
-
-    outputEl.innerHTML = `
-      <div class="p-4 rounded-xl bg-slate-950/80 border border-indigo-500/30 text-slate-200 text-sm space-y-2">
-        <div class="flex items-center justify-between text-xs text-emerald-400 font-semibold border-b border-slate-800 pb-2 mb-2">
-          <span>✅ วิเคราะห์และแปลผลสำเร็จ (โดย Gemini 2.5 Flash)</span>
-          <button onclick="navigator.clipboard.writeText(document.getElementById('gemini-result-body').innerText); alert('คัดลอกผลวิเคราะห์แล้ว');" class="text-indigo-400 hover:underline cursor-pointer">📋 คัดลอกผลวิเคราะห์</button>
-        </div>
-        <div id="gemini-result-body" class="leading-relaxed"><p>${formattedHtml}</p></div>
-      </div>
-    `;
-  } catch (err) {
-    outputEl.innerHTML = `<div class="p-3 rounded-xl bg-rose-950/40 border border-rose-500/30 text-rose-300 text-xs">❌ เกิดข้อผิดพลาด: ${err.message}</div>`;
-  } finally {
-    btnEl.disabled = false;
-    btnEl.innerHTML = `<span>✨ ให้ AI วิเคราะห์และแปลผล</span>`;
-  }
-};
-            if (dot) dot.className = "w-2 h-2 rounded-full bg-amber-400";
-            if (label) label.textContent = "Supabase Telemetry";
-            return false;
-        }
 
         function openSupabaseConfigModal() {
             document.getElementById('sb-url-input').value = supabaseConfig.url || "";
@@ -2832,6 +2745,115 @@ ${bodyTextSnapshot}`;
             if (str === null || str === undefined) return '';
             return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         }
+            // =========================================================================
+// ONE-CLICK SMART ACADEMIC SYNTHESIZER (ไม่ต้องใช้ API KEY - ทำงานทันที 100%)
+// =========================================================================
+window.runSmartAcademicSynthesizer = function () {
+  const outputEl = document.getElementById("gemini-analysis-output");
+  if (!outputEl) return;
+
+  const proj = typeof getCurrentProject === "function" ? getCurrentProject() : null;
+  const items = proj?.items || [];
+  const total = items.length;
+
+  if (total === 0) {
+    outputEl.innerHTML = `<div class="p-3.5 rounded-xl bg-amber-950/50 border border-amber-500/40 text-amber-200 text-xs">⚠️ ยังไม่พบรายการอ้างอิงหรือไฟล์เอกสารในระบบ กรุณานำเข้าไฟล์ (.docx / .pdf) หรือกด "ตรวจครบทุกมิติในคลิกเดียว" ก่อนกดแปลผลครับ</div>`;
+    return;
+  }
+
+  const verifiedAB = items.filter(i => i.grade === "A" || i.grade === "B").length;
+  const gradeC = items.filter(i => i.grade === "C").length;
+  const gradeEF = items.filter(i => i.grade === "E" || i.grade === "F").length;
+  const predatory = items.filter(i => i.journalRadarStatus && i.journalRadarStatus.includes("แจ้งเตือน")).length;
+  const retracted = items.filter(i => i.retractionStatus && i.retractionStatus.includes("เพิกถอน") && !i.retractionStatus.includes("ไม่พบ")).length;
+  const currentYear = new Date().getFullYear();
+  const recent = items.filter(i => i.year && (currentYear - Number(i.year)) <= 5).length;
+
+  const abPct = Math.round((verifiedAB / total) * 100);
+  const recencyPct = Math.round((recent / total) * 100);
+  const simPct = Number(proj?.similarityReport?.overallPct ?? 0);
+  const aiPct = Number(proj?.writingAudit?.aiPct ?? 0);
+
+  let overallLevel = "ผ่านเกณฑ์มาตรฐานระดับดีมาก (พร้อมยื่นสอบ/ตีพิมพ์)";
+  let levelColor = "text-emerald-400";
+  if (retracted > 0 || predatory > 0 || simPct > 25 || abPct < 60) {
+    overallLevel = "พบจุดเสี่ยงสำคัญที่ต้องแก้ไขก่อนยื่นพิจารณา (Critical Revision Needed)";
+    levelColor = "text-rose-400";
+  } else if (gradeC > 0 || recencyPct < 50 || simPct > 15 || aiPct > 30) {
+    overallLevel = "ผ่านเกณฑ์เบื้องต้น แต่ควรปรับปรุงเพิ่มเติมเพื่อความสมบูรณ์ (Minor Revision)";
+    levelColor = "text-amber-400";
+  }
+
+  const strengths = [];
+  const risks = [];
+  const actions = [];
+
+  if (abPct >= 80) strengths.push(`ความน่าเชื่อถือของแหล่งอ้างอิงอยู่ในระดับสูงมาก (${abPct}% ได้รับการยืนยันในฐานข้อมูลปฐมภูมิระดับ A–B)`);
+  else {
+    risks.push(`สัดส่วนเอกสารอ้างอิงระดับ A–B อยู่ที่ ${abPct}% (${verifiedAB}/${total} รายการ) ยังมีรายการระดับ C–F ที่ข้อมูลไม่สมบูรณ์`);
+    actions.push(`ตรวจสอบและเติมเลข DOI หรือชื่อวารสารให้ครบถ้วนในรายการระดับ C (${gradeC} รายการ) และตัดรายการที่ไม่พบหลักฐานระดับ E–F (${gradeEF} รายการ) ออก`);
+  }
+
+  if (predatory === 0 && retracted === 0) strengths.push(`ปลอดจากวารสารล่าเหยื่อ (Predatory Journals) และบทความที่ถูกเพิกถอน (Retracted Articles) 100%`);
+  if (predatory > 0) {
+    risks.push(`ตรวจพบการอ้างอิงวารสารกลุ่มเสี่ยง/วารสารล่าเหยื่อ จำนวน ${predatory} รายการ`);
+    actions.push(`เปลี่ยนแหล่งอ้างอิงที่ถูกแจ้งเตือน Predatory ไปใช้วารสารที่อยู่ในฐานข้อมูล Scopus, Web of Science หรือ TCI กลุ่ม 1–2 แทนทันที`);
+  }
+  if (retracted > 0) {
+    risks.push(`ตรวจพบบทความที่ถูกสำนักพิมพ์เพิกถอน (Retracted) จำนวน ${retracted} รายการ`);
+    actions.push(`ลบบทความที่ถูกเพิกถอนออกจากเนื้อหาและบรรณานุกรมโดยด่วน เนื่องจากส่งผลกระทบโดยตรงต่อความน่าเชื่อถือของงานวิจัย`);
+  }
+
+  if (recencyPct >= 60) strengths.push(`วรรณกรรมมีความทันสมัยสูง (${recencyPct}% เป็นเอกสารที่ตีพิมพ์ภายใน 5 ปีย้อนหลัง)`);
+  else {
+    risks.push(`สัดส่วนความทันสมัยของเอกสารย้อนหลัง 5 ปี อยู่ที่ ${recencyPct}% (ต่ำกว่าเกณฑ์แนะนำ 60%)`);
+    actions.push(`สืบค้นงานวิจัยใหม่ๆ ในช่วงปี ${currentYear - 4}–${currentYear} มาเสริมในบททบทวนวรรณกรรมและส่วนอภิปรายผลอย่างน้อย ${Math.max(1, Math.ceil(total * 0.6) - recent)} รายการ`);
+  }
+
+  if (simPct > 0) {
+    if (simPct <= 15) strengths.push(`ดัชนีความคล้ายคลึง (Similarity Index) อยู่ที่ ${simPct}% ซึ่งอยู่ในเกณฑ์ปลอดภัย (< 15%)`);
+    else {
+      risks.push(`ค่าความคล้ายคลึง (Similarity Index) อยู่ที่ ${simPct}% ซึ่งสูงกว่าเกณฑ์มาตรฐานทั่วไป`);
+      actions.push(`กลับไปตรวจสอบแถบไฮไลต์สีในแท็บที่ 6 และเรียบเรียงประโยคใหม่ (Paraphrase) พร้อมระบุอ้างอิงให้ชัดเจน`);
+    }
+  }
+
+  if (aiPct > 0) {
+    if (aiPct <= 25) strengths.push(`สำนวนการเขียนมีความเป็นธรรมชาติสูง (พบแพตเทิร์น AI เพียง ${aiPct}%)`);
+    else {
+      risks.push(`ตรวจพบรูปแบบสำนวนการเขียนที่คล้าย AI (AI Pattern) สูงถึง ${aiPct}%`);
+      actions.push(`ปรับแก้ย่อหน้าที่ถูกแจ้งเตือนในแท็บที่ 5 โดยเพิ่มการวิเคราะห์เชิงลึกและการเชื่อมโยงหลักฐานด้วยสำนวนของผู้วิจัยเอง`);
+    }
+  }
+
+  if (actions.length === 0) {
+    actions.push("ผลงานผ่านเกณฑ์มาตรฐานครบทุกมิติ สามารถกดปุ่ม 'Export Word (.doc)' หรือพิมพ์ใบรับรอง (Audit Certificate) เพื่อยื่นประกอบการพิจารณาได้ทันที");
+  }
+
+  outputEl.innerHTML = `
+    <div class="p-4 rounded-xl bg-slate-950/90 border border-indigo-500/40 text-slate-200 text-sm space-y-3">
+      <div class="flex items-center justify-between text-xs border-b border-slate-800 pb-2">
+        <span class="font-bold ${levelColor}">📊 ผลการวินิจฉัย: ${overallLevel}</span>
+        <button onclick="navigator.clipboard.writeText(document.getElementById('smart-result-text').innerText); alert('คัดลอกรายงานวิเคราะห์แล้ว');" class="text-indigo-400 hover:underline cursor-pointer">📋 คัดลอกรายงาน</button>
+      </div>
+      <div id="smart-result-text" class="space-y-3 text-xs sm:text-sm leading-relaxed">
+        <div>
+          <strong class="text-emerald-400 block mb-1">1. จุดแข็งที่ผ่านเกณฑ์มาตรฐาน (Strengths):</strong>
+          <ul class="list-disc pl-5 space-y-1 text-slate-300">${strengths.length ? strengths.map(s => `<li>${s}</li>`).join("") : "<li>อยู่ระหว่างการปรับปรุงข้อมูลอ้างอิงเบื้องต้น</li>"}</ul>
+        </div>
+        ${risks.length ? `
+        <div>
+          <strong class="text-rose-400 block mb-1">2. จุดเสี่ยงและประเด็นที่ตรวจพบ (Risk Alerts):</strong>
+          <ul class="list-disc pl-5 space-y-1 text-slate-300">${risks.map(r => `<li>${r}</li>`).join("")}</ul>
+        </div>` : ""}
+        <div>
+          <strong class="text-indigo-300 block mb-1">3. ข้อเสนอแนะเชิงปฏิบัติการเพื่อปรับแก้ (Actionable Recommendations):</strong>
+          <ul class="list-disc pl-5 space-y-1 text-slate-300">${actions.map(a => `<li>${a}</li>`).join("")}</ul>
+        </div>
+      </div>
+    </div>
+  `;
+};
     </script>
 </body>
 </html>
